@@ -20,7 +20,7 @@ const run = async () => {
   });
 
   const response = await axios.get(
-    "https://boardgamegeek.com/xmlapi/geeklist/308763?comments=1"
+    "https://boardgamegeek.com/xmlapi/geeklist/314602?comments=1"
   );
 
   const geeklistJson = convert.xml2json(response.data, {
@@ -29,6 +29,7 @@ const run = async () => {
   });
 
   let outputArr = [];
+  let noBids = [];
 
   for (const item of JSON.parse(geeklistJson).geeklist.item) {
     const thisGame = {
@@ -49,19 +50,30 @@ const run = async () => {
     if (item.comment && !Array.isArray(item.comment)) {
       const text = item.comment._text.replace(/\n/g, " ");
       if (parseCurrency(text) === null) {
-        gameComments.push(text);
+        gameComments.push(
+          text + " (" + item.comment._attributes.username + ")"
+        );
       } else {
-        gameComments.push(parseCurrency(text).raw);
+        gameComments.push(
+          parseCurrency(text).raw +
+            " (" +
+            item.comment._attributes.username +
+            ")"
+        );
       }
     }
+
+    // console.log(item.comment);
 
     if (item.comment && Array.isArray(item.comment)) {
       for (const comment of item.comment) {
         const text = comment._text.replace(/\n/g, " ");
         if (parseCurrency(text) === null) {
-          gameComments.push(text);
+          gameComments.push(text + " (" + comment._attributes.username + ")");
         } else {
-          gameComments.push(parseCurrency(text).raw);
+          gameComments.push(
+            parseCurrency(text).raw + " (" + comment._attributes.username + ")"
+          );
         }
       }
     }
@@ -70,17 +82,26 @@ const run = async () => {
 
     if (thisGame.bids && thisGame.bids.length > 0) {
       outputArr.push(thisGame);
+    } else {
+      noBids.push(thisGame);
     }
   }
 
   const owner = {};
-  const byOwner = outputArr.map((o) => {
+  outputArr.map((o) => {
     if (!owner[o.owner]) {
       owner[o.owner] = [];
     }
     owner[o.owner].push(o.game + " bids: " + o.bids.toString());
   });
   console.log(owner);
+
+  const noBidsStr = noBids.map((o) => {
+    return o.owner + ": " + o.game;
+  });
+
+  console.log("No bids yet:");
+  console.log(noBidsStr.sort());
 };
 
 run();
